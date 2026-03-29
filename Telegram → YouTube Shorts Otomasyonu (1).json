@@ -1,0 +1,363 @@
+{
+  "name": "Telegram → YouTube Shorts Otomasyonu",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "d85b073c-ec30-4dd4-b2b4-19fba7b1df62",
+      "name": "Telegram Tetikleyici",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -448,
+        240
+      ],
+      "webhookId": "bab34dda-64cd-495b-99b5-3a422f3e9207",
+      "credentials": {
+        "telegramApi": {
+          "id": "zt73vNxxa2Du0zLt",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-text-check",
+              "leftValue": "={{ $json.message.text }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "02efb5dc-35f7-4846-9f33-48b8f6d9d201",
+      "name": "Mesaj Kontrolü",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -224,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "set-konu",
+              "name": "konu",
+              "value": "={{ $json.message.text }}",
+              "type": "string"
+            },
+            {
+              "id": "set-chat-id",
+              "name": "chatId",
+              "value": "={{ $json.message.chat.id }}",
+              "type": "number"
+            },
+            {
+              "id": "set-tarih",
+              "name": "tarih",
+              "value": "={{ $now.format('yyyy-MM-dd') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e464325a-f43f-4838-ad05-b93e1dc54812",
+      "name": "Verileri Ayarla",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Gemini yanıtından script verisini çıkar\nconst geminiResponse = $input.first().json;\n\nlet scriptData;\ntry {\n  // Gemini yanıtından metin içeriğini al\n  const textContent = geminiResponse.candidates[0].content.parts[0].text;\n  scriptData = JSON.parse(textContent);\n} catch (e) {\n  // JSON parse edilemezse ham metinden çıkarmaya çalış\n  const rawText = geminiResponse.candidates?.[0]?.content?.parts?.[0]?.text || '';\n  scriptData = {\n    baslik: 'YouTube Shorts - ' + $('Verileri Ayarla').first().json.konu,\n    aciklama: rawText.substring(0, 500),\n    etiketler: ['shorts', 'türkçe', 'yapay zeka'],\n    sahneler: [\n      { sahne_no: 1, metin: rawText, gorsel_aciklama: 'Ana içerik', sure_saniye: 30 }\n    ]\n  };\n}\n\n// Tüm sahnelerin metinlerini birleştir\nconst tumMetin = scriptData.sahneler\n  .map(s => `Sahne ${s.sahne_no}: ${s.metin}`)\n  .join('\\n\\n');\n\n// Video için metin overlay dosyası oluştur\nconst videoMetni = scriptData.sahneler\n  .map(s => s.metin)\n  .join('\\n---\\n');\n\nreturn [{\n  json: {\n    baslik: scriptData.baslik,\n    aciklama: scriptData.aciklama,\n    etiketler: scriptData.etiketler || ['shorts'],\n    sahneler: scriptData.sahneler,\n    tumMetin: tumMetin,\n    videoMetni: videoMetni,\n    chatId: $('Verileri Ayarla').first().json.chatId,\n    konu: $('Verileri Ayarla').first().json.konu,\n    tarih: $('Verileri Ayarla').first().json.tarih\n  }\n}];"
+      },
+      "id": "a61a2c47-35f8-4439-812c-8f9f90473b11",
+      "name": "Script İşle",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "video",
+        "filters": {},
+        "options": {}
+      },
+      "id": "92068cfa-8a13-40ee-b690-15e78933ffe8",
+      "name": "YouTube'a Yükle",
+      "type": "n8n-nodes-base.youTube",
+      "typeVersion": 1,
+      "position": [
+        1104,
+        160
+      ],
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": "lnGLLN0NDnuCPTEs",
+          "name": "YouTube account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Verileri Ayarla').first().json.chatId }}",
+        "text": "=✅ **YouTube Shorts Yüklendi!**\n\n🎬 **Başlık:** {{ $('Script İşle').first().json.baslik }}\n📝 **Konu:** {{ $('Verileri Ayarla').first().json.konu }}\n🏷️ **Etiketler:** {{ ($('Script İşle').first().json.etiketler || []).join(', ') }}\n📅 **Tarih:** {{ $('Verileri Ayarla').first().json.tarih }}\n\n🔗 Video linki YouTube Studio'dan kontrol edilebilir.",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "a7d572a5-52de-47f3-b748-30f27471123e",
+      "name": "Telegram Bildirim",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1328,
+        160
+      ],
+      "webhookId": "7c1d92d9-20ad-4084-994f-f44ce2946473",
+      "credentials": {
+        "telegramApi": {
+          "id": "zt73vNxxa2Du0zLt",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.message.chat.id }}",
+        "text": "❌ Lütfen bir konu/metin gönderin. Dosya veya resim işleyemiyorum.\n\nÖrnek: `Sabah rutini 5 alışkanlık`",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "d1c0d20d-a969-45a7-bec8-a4ed881461f4",
+      "name": "Hata Mesajı",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        368
+      ],
+      "webhookId": "bbb445b6-79d9-442d-8391-0f21037eba64",
+      "credentials": {
+        "telegramApi": {
+          "id": "zt73vNxxa2Du0zLt",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Verileri Ayarla').first().json.chatId }}",
+        "text": "=⏳ **İşleniyor...**\n\n📝 Konu: _{{ $json.konu }}_\n🤖 Gemini script yazıyor...\n\nBirkaç dakika içinde tamamlanacak!",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "f37a0b93-832c-40a5-9cc9-5ac8ee3d9b17",
+      "name": "İşlem Başladı Bildirimi",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "c42fc2aa-afd6-4b91-b993-4ad8efe1bc46",
+      "credentials": {
+        "telegramApi": {
+          "id": "zt73vNxxa2Du0zLt",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Verileri Ayarla').first().json.chatId }}",
+        "text": "=❌ **Hata Oluştu!**\n\nVideo oluşturulurken bir sorun yaşandı. Lütfen tekrar deneyin.\n\nHata: {{ $json.error?.message || 'Bilinmeyen hata' }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "29f197ae-8bea-4a00-b12d-9282a9b3b317",
+      "name": "Hata Bildirimi",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        880,
+        368
+      ],
+      "webhookId": "309ae09a-ed31-4705-a086-5102fcf1e277",
+      "credentials": {
+        "telegramApi": {
+          "id": "zt73vNxxa2Du0zLt",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-1.5-flash",
+          "mode": "id"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Sen bir YouTube Shorts script yazari. Konu: {{  $json.konu }}. JSON formatinda dondur: {\"baslik\": \"...\", \"sahneler\": []} }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        1456,
+        304
+      ],
+      "id": "ffe39b2a-0339-4f94-88d9-63ab76cc38dc",
+      "name": "Message a model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YSm4ERcepgxFplCs",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Tetikleyici": {
+      "main": [
+        [
+          {
+            "node": "Mesaj Kontrolü",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mesaj Kontrolü": {
+      "main": [
+        [
+          {
+            "node": "Verileri Ayarla",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Hata Mesajı",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verileri Ayarla": {
+      "main": [
+        [
+          {
+            "node": "İşlem Başladı Bildirimi",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Script İşle",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "YouTube'a Yükle": {
+      "main": [
+        [
+          {
+            "node": "Telegram Bildirim",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Script İşle",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "3a22e239-dc33-45c4-85fa-249d4b32794b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a41ee50dead791954c783f899042ff21664ed8c395a4f1c802f71d77cfe02b09"
+  },
+  "id": "PgMrRgSylWsQ1Dq5vMwDV",
+  "tags": [
+    {
+      "updatedAt": "2026-03-29T10:20:04.968Z",
+      "createdAt": "2026-03-29T10:20:04.968Z",
+      "id": "gaHpl5LAyABv6NSK",
+      "name": "YouTube Shorts"
+    },
+    {
+      "updatedAt": "2026-03-29T10:20:04.972Z",
+      "createdAt": "2026-03-29T10:20:04.972Z",
+      "id": "qix2TMk9xhdQ08rk",
+      "name": "Telegram"
+    }
+  ]
+}
