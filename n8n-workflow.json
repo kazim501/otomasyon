@@ -1,0 +1,360 @@
+{
+  "name": "Telegram → YouTube Shorts Otomasyonu",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["message"],
+        "additionalFields": {}
+      },
+      "id": "telegram-trigger",
+      "name": "Telegram Tetikleyici",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [220, 300],
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-text-check",
+              "leftValue": "={{ $json.message.text }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "mesaj-kontrol",
+      "name": "Mesaj Kontrolü",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "set-konu",
+              "name": "konu",
+              "value": "={{ $json.message.text }}",
+              "type": "string"
+            },
+            {
+              "id": "set-chat-id",
+              "name": "chatId",
+              "value": "={{ $json.message.chat.id }}",
+              "type": "number"
+            },
+            {
+              "id": "set-tarih",
+              "name": "tarih",
+              "value": "={{ $now.format('yyyy-MM-dd') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "veri-ayarla",
+      "name": "Verileri Ayarla",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [660, 220]
+    },
+    {
+      "parameters": {
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"Sen bir YouTube Shorts script yazarısın. Aşağıdaki konu hakkında 30-60 saniyelik bir YouTube Shorts videosu için script yaz.\\n\\nKurallar:\\n1. Script Türkçe olmalı\\n2. İlk cümle dikkat çekici bir kanca (hook) olmalı\\n3. Kısa, net ve etkileyici cümleler kullan\\n4. 5-8 sahne/kare olmalı (her sahne için ayrı bir satır)\\n5. Her sahne için [SAHNE X: açıklama] formatını kullan\\n6. Sonunda bir CTA (Call to Action) olmalı\\n7. JSON formatında döndür: {\\\"baslik\\\": \\\"...\\\", \\\"aciklama\\\": \\\"...\\\", \\\"etiketler\\\": [\\\"...\\\"], \\\"sahneler\\\": [{\\\"sahne_no\\\": 1, \\\"metin\\\": \\\"...\\\", \\\"gorsel_aciklama\\\": \\\"...\\\", \\\"sure_saniye\\\": 5}]}\\n\\nKonu: {{ $json.konu }}\"\n        }\n      ]\n    }\n  ],\n  \"generationConfig\": {\n    \"temperature\": 0.8,\n    \"maxOutputTokens\": 2048,\n    \"responseMimeType\": \"application/json\"\n  }\n}",
+        "options": {}
+      },
+      "id": "gemini-script",
+      "name": "Gemini Script Oluştur",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 220],
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Gemini yanıtından script verisini çıkar\nconst geminiResponse = $input.first().json;\n\nlet scriptData;\ntry {\n  // Gemini yanıtından metin içeriğini al\n  const textContent = geminiResponse.candidates[0].content.parts[0].text;\n  scriptData = JSON.parse(textContent);\n} catch (e) {\n  // JSON parse edilemezse ham metinden çıkarmaya çalış\n  const rawText = geminiResponse.candidates?.[0]?.content?.parts?.[0]?.text || '';\n  scriptData = {\n    baslik: 'YouTube Shorts - ' + $('Verileri Ayarla').first().json.konu,\n    aciklama: rawText.substring(0, 500),\n    etiketler: ['shorts', 'türkçe', 'yapay zeka'],\n    sahneler: [\n      { sahne_no: 1, metin: rawText, gorsel_aciklama: 'Ana içerik', sure_saniye: 30 }\n    ]\n  };\n}\n\n// Tüm sahnelerin metinlerini birleştir\nconst tumMetin = scriptData.sahneler\n  .map(s => `Sahne ${s.sahne_no}: ${s.metin}`)\n  .join('\\n\\n');\n\n// Video için metin overlay dosyası oluştur\nconst videoMetni = scriptData.sahneler\n  .map(s => s.metin)\n  .join('\\n---\\n');\n\nreturn [{\n  json: {\n    baslik: scriptData.baslik,\n    aciklama: scriptData.aciklama,\n    etiketler: scriptData.etiketler || ['shorts'],\n    sahneler: scriptData.sahneler,\n    tumMetin: tumMetin,\n    videoMetni: videoMetni,\n    chatId: $('Verileri Ayarla').first().json.chatId,\n    konu: $('Verileri Ayarla').first().json.konu,\n    tarih: $('Verileri Ayarla').first().json.tarih\n  }\n}];"
+      },
+      "id": "script-isle",
+      "name": "Script İşle",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 220]
+    },
+    {
+      "parameters": {
+        "command": "=powershell -Command \"\n# Geçici dosyalar için klasör oluştur\n$tempDir = Join-Path $env:TEMP 'n8n_shorts'\nif (-not (Test-Path $tempDir)) { New-Item -ItemType Directory -Path $tempDir -Force }\n\n$outputFile = Join-Path $tempDir ('shorts_' + (Get-Date -Format 'yyyyMMdd_HHmmss') + '.mp4')\n$textFile = Join-Path $tempDir 'overlay.txt'\n\n# Video metnini dosyaya yaz\n$videoText = @'\n{{ $json.videoMetni }}\n'@\n$videoText | Out-File -FilePath $textFile -Encoding utf8\n\n# Sahneleri ayrı ayrı oluştur ve birleştir\n$sahneler = @()\n$sahneIndex = 0\n$sahnelerJson = '{{ JSON.stringify($json.sahneler) }}' | ConvertFrom-Json\n\n# Renk paletleri (gradient benzeri arka planlar)\n$renkler = @(\n  '#1a1a2e',\n  '#16213e', \n  '#0f3460',\n  '#533483',\n  '#e94560',\n  '#2d3436',\n  '#6c5ce7',\n  '#00b894'\n)\n\nforeach ($sahne in $sahnelerJson) {\n  $sahneFile = Join-Path $tempDir ('sahne_' + $sahneIndex + '.mp4')\n  $renk = $renkler[$sahneIndex % $renkler.Length]\n  $sure = if ($sahne.sure_saniye) { $sahne.sure_saniye } else { 5 }\n  $metin = $sahne.metin -replace \\\"'\\\", \\\"\\\"  \n  \n  # FFmpeg ile sahne videosu oluştur (renkli arka plan + beyaz metin)\n  ffmpeg -y -f lavfi -i color=c=$renk`:size=1080x1920:duration=$sure -vf `\n    \\\"drawtext=text='$metin':fontcolor=white:fontsize=42:x=(w-text_w)/2:y=(h-text_h)/2:line_spacing=20\\\" `\n    -c:v libx264 -pix_fmt yuv420p $sahneFile 2>&1 | Out-Null\n  \n  $sahneler += $sahneFile\n  $sahneIndex++\n}\n\n# Birleştirme listesi oluştur\n$concatFile = Join-Path $tempDir 'concat.txt'\n$sahneler | ForEach-Object { \\\"file '$_'\\\" } | Out-File -FilePath $concatFile -Encoding utf8\n\n# Sahneleri birleştir\nffmpeg -y -f concat -safe 0 -i $concatFile -c:v libx264 -pix_fmt yuv420p $outputFile 2>&1 | Out-Null\n\n# Çıktı dosya yolunu döndür\nWrite-Output $outputFile\n\""
+      },
+      "id": "video-olustur",
+      "name": "Video Oluştur (FFmpeg)",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1320, 220]
+    },
+    {
+      "parameters": {
+        "filePath": "={{ $json.stdout.trim() }}",
+        "options": {}
+      },
+      "id": "dosya-oku",
+      "name": "Video Dosyasını Oku",
+      "type": "n8n-nodes-base.readBinaryFiles",
+      "typeVersion": 1,
+      "position": [1540, 220]
+    },
+    {
+      "parameters": {
+        "resource": "video",
+        "title": "={{ $('Script İşle').first().json.baslik }}",
+        "categoryId": "22",
+        "options": {
+          "description": "={{ $('Script İşle').first().json.aciklama + '\\n\\n#Shorts #YapayZeka #AI\\n\\n' + ($('Script İşle').first().json.etiketler || []).map(t => '#' + t).join(' ') }}",
+          "privacyStatus": "public",
+          "tags": "={{ ($('Script İşle').first().json.etiketler || ['shorts']).join(',') }}"
+        }
+      },
+      "id": "youtube-yukle",
+      "name": "YouTube'a Yükle",
+      "type": "n8n-nodes-base.youTube",
+      "typeVersion": 1,
+      "position": [1760, 220],
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": "",
+          "name": "YouTube OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Verileri Ayarla').first().json.chatId }}",
+        "text": "=✅ **YouTube Shorts Yüklendi!**\n\n🎬 **Başlık:** {{ $('Script İşle').first().json.baslik }}\n📝 **Konu:** {{ $('Verileri Ayarla').first().json.konu }}\n🏷️ **Etiketler:** {{ ($('Script İşle').first().json.etiketler || []).join(', ') }}\n📅 **Tarih:** {{ $('Verileri Ayarla').first().json.tarih }}\n\n🔗 Video linki YouTube Studio'dan kontrol edilebilir.",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "telegram-bildirim",
+      "name": "Telegram Bildirim",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1980, 220],
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.message.chat.id }}",
+        "text": "❌ Lütfen bir konu/metin gönderin. Dosya veya resim işleyemiyorum.\n\nÖrnek: `Sabah rutini 5 alışkanlık`",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "hata-mesaji",
+      "name": "Hata Mesajı",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [660, 420],
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Verileri Ayarla').first().json.chatId }}",
+        "text": "=⏳ **İşleniyor...**\n\n📝 Konu: _{{ $json.konu }}_\n🤖 Gemini script yazıyor...\n\nBirkaç dakika içinde tamamlanacak!",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "islem-bildirimi",
+      "name": "İşlem Başladı Bildirimi",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [660, 60],
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Verileri Ayarla').first().json.chatId }}",
+        "text": "=❌ **Hata Oluştu!**\n\nVideo oluşturulurken bir sorun yaşandı. Lütfen tekrar deneyin.\n\nHata: {{ $json.error?.message || 'Bilinmeyen hata' }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "hata-bildirimi",
+      "name": "Hata Bildirimi",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1540, 420],
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Tetikleyici": {
+      "main": [
+        [
+          {
+            "node": "Mesaj Kontrolü",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mesaj Kontrolü": {
+      "main": [
+        [
+          {
+            "node": "Verileri Ayarla",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Hata Mesajı",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verileri Ayarla": {
+      "main": [
+        [
+          {
+            "node": "İşlem Başladı Bildirimi",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Gemini Script Oluştur",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Script Oluştur": {
+      "main": [
+        [
+          {
+            "node": "Script İşle",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Script İşle": {
+      "main": [
+        [
+          {
+            "node": "Video Oluştur (FFmpeg)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Video Oluştur (FFmpeg)": {
+      "main": [
+        [
+          {
+            "node": "Video Dosyasını Oku",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Video Dosyasını Oku": {
+      "main": [
+        [
+          {
+            "node": "YouTube'a Yükle",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "YouTube'a Yükle": {
+      "main": [
+        [
+          {
+            "node": "Telegram Bildirim",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "YouTube Shorts",
+      "createdAt": "2026-03-29T00:00:00.000Z",
+      "updatedAt": "2026-03-29T00:00:00.000Z"
+    },
+    {
+      "name": "Telegram",
+      "createdAt": "2026-03-29T00:00:00.000Z",
+      "updatedAt": "2026-03-29T00:00:00.000Z"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2026-03-29T00:00:00.000Z",
+  "versionId": "1"
+}

@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Shorts Otomasyon Paneli</title>
+    <meta name="description" content="n8n + Telegram + YouTube Shorts Otomasyon Yönetim Paneli">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Animated Background -->
+    <div class="bg-grid"></div>
+    <div class="glow-orb glow-orb-1"></div>
+    <div class="glow-orb glow-orb-2"></div>
+    <div class="glow-orb glow-orb-3"></div>
+
+    <!-- Header -->
+    <header id="main-header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="5 3 19 12 5 21 5 3"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1>Shorts Otomasyon</h1>
+                    <span class="subtitle">n8n + Telegram + YouTube</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <div class="status-badge" id="n8n-status">
+                    <span class="status-dot"></span>
+                    <span>Kontrol ediliyor...</span>
+                </div>
+                <a href="http://localhost:5678" target="_blank" class="btn btn-primary" id="open-n8n-btn">
+                    n8n'i Aç ↗
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+        <!-- Stats Cards -->
+        <section class="stats-grid" id="stats-section">
+            <div class="stat-card" id="stat-n8n">
+                <div class="stat-icon" style="background: linear-gradient(135deg, #ff6b35, #f7c948);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                        <path d="M2 17l10 5 10-5"/>
+                        <path d="M2 12l10 5 10-5"/>
+                    </svg>
+                </div>
+                <div class="stat-info">
+                    <h3>n8n</h3>
+                    <p class="stat-value" id="n8n-status-text">Kontrol ediliyor...</p>
+                    <span class="stat-label">Workflow Engine</span>
+                </div>
+            </div>
+
+            <div class="stat-card" id="stat-telegram">
+                <div class="stat-icon" style="background: linear-gradient(135deg, #0088cc, #00c6ff);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+                    </svg>
+                </div>
+                <div class="stat-info">
+                    <h3>Telegram Bot</h3>
+                    <p class="stat-value" id="telegram-status-text">Ayarlanmadı</p>
+                    <span class="stat-label">Mesaj Tetikleyici</span>
+                </div>
+            </div>
+
+            <div class="stat-card" id="stat-gemini">
+                <div class="stat-icon" style="background: linear-gradient(135deg, #4285f4, #a855f7);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                    </svg>
+                </div>
+                <div class="stat-info">
+                    <h3>Google Gemini</h3>
+                    <p class="stat-value" id="gemini-status-text">Ücretsiz Tier ✓</p>
+                    <span class="stat-label">AI Script Yazarı</span>
+                </div>
+            </div>
+
+            <div class="stat-card" id="stat-youtube">
+                <div class="stat-icon" style="background: linear-gradient(135deg, #ff0000, #ff4444);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="4" width="20" height="16" rx="4"/>
+                        <polygon points="10 8 16 12 10 16 10 8"/>
+                    </svg>
+                </div>
+                <div class="stat-info">
+                    <h3>YouTube</h3>
+                    <p class="stat-value" id="youtube-status-text">Kanal gerekli</p>
+                    <span class="stat-label">Shorts Yükleme</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Setup Checklist -->
+        <section class="panel" id="setup-section">
+            <div class="panel-header">
+                <h2>🚀 Kurulum Adımları</h2>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="setup-progress" style="width: 0%"></div>
+                </div>
+                <span class="progress-text" id="progress-text">0/7 tamamlandı</span>
+            </div>
+            <div class="checklist" id="setup-checklist">
+                <div class="check-item" data-step="1">
+                    <label class="check-label">
+                        <input type="checkbox" id="check-nodejs">
+                        <span class="checkmark"></span>
+                        <div class="check-content">
+                            <strong>Node.js Kurulumu</strong>
+                            <p>nodejs.org adresinden LTS sürümünü indirin</p>
+                        </div>
+                    </label>
+                    <a href="https://nodejs.org" target="_blank" class="btn btn-sm">İndir ↗</a>
+                </div>
+
+                <div class="check-item" data-step="2">
+                    <label class="check-label">
+                        <input type="checkbox" id="check-n8n">
+                        <span class="checkmark"></span>
+                        <div class="check-content">
+                            <strong>n8n Kurulumu & Çalıştırma</strong>
+                            <p><code>npm install -g n8n</code> → sonra <code>n8n</code> komutu ile başlatın</p>
+                        </div>
+                    </label>
+                    <button class="btn btn-sm" onclick="copyToClipboard('npm install -g n8n')">Kopyala</button>
+                </div>
+
+                <div class="check-item" data-step="3">
+                    <label class="check-label">
+                        <input type="checkbox" id="check-ffmpeg">
+                        <span class="checkmark"></span>
+                        <div class="check-content">
+                            <strong>FFmpeg Kurulumu</strong>
+                            <p>Video oluşturmak için gerekli. <code>winget install ffmpeg</code></p>
+                        </div>
+                    </label>
+                    <button class="btn btn-sm" onclick="copyToClipboard('winget install ffmpeg')">Kopyala</button>
+                </div>
+
+                <div class="check-item" data-step="4">
+                    <label class="check-label">
+                        <input type="checkbox" id="check-telegram">
+                        <span class="checkmark"></span>
+                        <div class="check-content">
+                            <strong>Telegram Bot Oluşturma</strong>
+                            <p>@BotFather'a git → /newbot → Token'ı kaydet</p>
+                        </div>
+                    </label>
+                    <a href="https://t.me/BotFather" target="_blank" class="btn btn-sm">BotFather ↗</a>
+                </div>
+
+                <div class="check-item" data-step="5">
+                    <label class="check-label">
+                        <input type="checkbox" id="check-gemini">
+                        <span class="checkmark"></span>
+                        <div class="check-content">
+                            <strong>Gemini API Anahtarı</strong>
+                            <p>Google AI Studio'dan ücretsiz API key al</p>
+                        </div>
+                    </label>
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank" class="btn btn-sm">Al ↗</a>
+                </div>
+
+                <div class="check-item" data-step="6">
+                    <label class="check-label">
+                        <input type="checkbox" id="check-youtube">
+                        <span class="checkmark"></span>
+                        <div class="check-content">
+                            <strong>YouTube Kanalı & API</strong>
+                            <p>Kanal oluştur → Cloud Console'da YouTube API etkinleştir → OAuth ayarla</p>
+                        </div>
+                    </label>
+                    <a href="https://console.cloud.google.com" target="_blank" class="btn btn-sm">Console ↗</a>
+                </div>
+
+                <div class="check-item" data-step="7">
+                    <label class="check-label">
+                        <input type="checkbox" id="check-workflow">
+                        <span class="checkmark"></span>
+                        <div class="check-content">
+                            <strong>Workflow Import</strong>
+                            <p>n8n'de <code>n8n-workflow.json</code> dosyasını içe aktarın</p>
+                        </div>
+                    </label>
+                    <a href="http://localhost:5678" target="_blank" class="btn btn-sm">n8n ↗</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Two Column Layout -->
+        <div class="two-col">
+            <!-- Workflow Diagram -->
+            <section class="panel" id="workflow-section">
+                <div class="panel-header">
+                    <h2>⚙️ Workflow Akışı</h2>
+                </div>
+                <div class="workflow-diagram">
+                    <div class="workflow-step active" id="ws-1">
+                        <div class="ws-icon" style="background: linear-gradient(135deg, #0088cc, #00c6ff);">📱</div>
+                        <div class="ws-content">
+                            <strong>Telegram</strong>
+                            <p>Konu gönder</p>
+                        </div>
+                        <div class="ws-arrow">→</div>
+                    </div>
+                    <div class="workflow-step" id="ws-2">
+                        <div class="ws-icon" style="background: linear-gradient(135deg, #ff6b35, #f7c948);">⚙️</div>
+                        <div class="ws-content">
+                            <strong>n8n</strong>
+                            <p>Mesajı al & işle</p>
+                        </div>
+                        <div class="ws-arrow">→</div>
+                    </div>
+                    <div class="workflow-step" id="ws-3">
+                        <div class="ws-icon" style="background: linear-gradient(135deg, #4285f4, #a855f7);">🤖</div>
+                        <div class="ws-content">
+                            <strong>Gemini AI</strong>
+                            <p>Script oluştur</p>
+                        </div>
+                        <div class="ws-arrow">→</div>
+                    </div>
+                    <div class="workflow-step" id="ws-4">
+                        <div class="ws-icon" style="background: linear-gradient(135deg, #00b894, #55efc4);">🎬</div>
+                        <div class="ws-content">
+                            <strong>FFmpeg</strong>
+                            <p>Video oluştur</p>
+                        </div>
+                        <div class="ws-arrow">→</div>
+                    </div>
+                    <div class="workflow-step" id="ws-5">
+                        <div class="ws-icon" style="background: linear-gradient(135deg, #ff0000, #ff4444);">📺</div>
+                        <div class="ws-content">
+                            <strong>YouTube</strong>
+                            <p>Shorts yükle</p>
+                        </div>
+                        <div class="ws-arrow">→</div>
+                    </div>
+                    <div class="workflow-step" id="ws-6">
+                        <div class="ws-icon" style="background: linear-gradient(135deg, #0088cc, #00c6ff);">✅</div>
+                        <div class="ws-content">
+                            <strong>Bildirim</strong>
+                            <p>Telegram'a gönder</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Quick Actions -->
+            <section class="panel" id="actions-section">
+                <div class="panel-header">
+                    <h2>⚡ Hızlı İşlemler</h2>
+                </div>
+                <div class="actions-grid">
+                    <a href="http://localhost:5678" target="_blank" class="action-card" id="action-n8n">
+                        <div class="action-icon">⚙️</div>
+                        <strong>n8n Arayüzü</strong>
+                        <p>Workflow düzenle</p>
+                    </a>
+                    <a href="https://studio.youtube.com" target="_blank" class="action-card" id="action-youtube">
+                        <div class="action-icon">📺</div>
+                        <strong>YouTube Studio</strong>
+                        <p>Videoları yönet</p>
+                    </a>
+                    <a href="https://aistudio.google.com" target="_blank" class="action-card" id="action-gemini">
+                        <div class="action-icon">🤖</div>
+                        <strong>Google AI Studio</strong>
+                        <p>API kullanımını gör</p>
+                    </a>
+                    <a href="https://t.me/BotFather" target="_blank" class="action-card" id="action-botfather">
+                        <div class="action-icon">🤖</div>
+                        <strong>BotFather</strong>
+                        <p>Bot ayarları</p>
+                    </a>
+                    <a href="https://console.cloud.google.com" target="_blank" class="action-card" id="action-gcloud">
+                        <div class="action-icon">☁️</div>
+                        <strong>Google Cloud</strong>
+                        <p>API yönetimi</p>
+                    </a>
+                    <a href="#" class="action-card" id="action-docs" onclick="openDocs(); return false;">
+                        <div class="action-icon">📖</div>
+                        <strong>Dokümantasyon</strong>
+                        <p>Kurulum rehberi</p>
+                    </a>
+                </div>
+            </section>
+        </div>
+
+        <!-- API Keys Configuration -->
+        <section class="panel" id="config-section">
+            <div class="panel-header">
+                <h2>🔑 API Yapılandırma Notları</h2>
+                <span class="badge">Yerel kayıt</span>
+            </div>
+            <div class="config-grid">
+                <div class="config-item">
+                    <label for="config-telegram-token">Telegram Bot Token</label>
+                    <div class="input-group">
+                        <input type="password" id="config-telegram-token" placeholder="6789012345:AAH..." class="config-input">
+                        <button class="btn btn-sm" onclick="togglePassword('config-telegram-token')">👁</button>
+                        <button class="btn btn-sm" onclick="saveConfig()">💾</button>
+                    </div>
+                    <small>BotFather'dan alınan token</small>
+                </div>
+                <div class="config-item">
+                    <label for="config-gemini-key">Gemini API Anahtarı</label>
+                    <div class="input-group">
+                        <input type="password" id="config-gemini-key" placeholder="AIzaSyB..." class="config-input">
+                        <button class="btn btn-sm" onclick="togglePassword('config-gemini-key')">👁</button>
+                        <button class="btn btn-sm" onclick="saveConfig()">💾</button>
+                    </div>
+                    <small>Google AI Studio'dan alınan key</small>
+                </div>
+                <div class="config-item">
+                    <label for="config-yt-client">YouTube Client ID</label>
+                    <div class="input-group">
+                        <input type="password" id="config-yt-client" placeholder="xxxx.apps.googleusercontent.com" class="config-input">
+                        <button class="btn btn-sm" onclick="togglePassword('config-yt-client')">👁</button>
+                        <button class="btn btn-sm" onclick="saveConfig()">💾</button>
+                    </div>
+                    <small>Google Cloud Console'dan alınan Client ID</small>
+                </div>
+                <div class="config-item">
+                    <label for="config-yt-secret">YouTube Client Secret</label>
+                    <div class="input-group">
+                        <input type="password" id="config-yt-secret" placeholder="GOCSPX-..." class="config-input">
+                        <button class="btn btn-sm" onclick="togglePassword('config-yt-secret')">👁</button>
+                        <button class="btn btn-sm" onclick="saveConfig()">💾</button>
+                    </div>
+                    <small>Google Cloud Console'dan alınan Client Secret</small>
+                </div>
+            </div>
+            <div class="config-note">
+                <p>⚠️ Bu bilgiler sadece tarayıcınızın yerel deposunda (localStorage) saklanır. Bunları n8n credential ayarlarına da girmeniz gerekir.</p>
+            </div>
+        </section>
+
+        <!-- How It Works -->
+        <section class="panel" id="howto-section">
+            <div class="panel-header">
+                <h2>📋 Nasıl Kullanılır?</h2>
+            </div>
+            <div class="howto-steps">
+                <div class="howto-step">
+                    <div class="howto-number">1</div>
+                    <div class="howto-content">
+                        <h3>Telegram'da Bot'a Mesaj Gönder</h3>
+                        <p>Bot'unuza hangi konuda video istediğinizi yazın.</p>
+                        <div class="howto-example">
+                            <code>Konu: Sabah rutini 5 alışkanlık</code>
+                        </div>
+                    </div>
+                </div>
+                <div class="howto-step">
+                    <div class="howto-number">2</div>
+                    <div class="howto-content">
+                        <h3>n8n Otomatik Çalışır</h3>
+                        <p>Mesajınız alındığında Gemini AI bir script oluşturur ve FFmpeg ile video üretilir.</p>
+                    </div>
+                </div>
+                <div class="howto-step">
+                    <div class="howto-number">3</div>
+                    <div class="howto-content">
+                        <h3>YouTube'a Otomatik Yüklenir</h3>
+                        <p>Video, başlık ve açıklama ile birlikte YouTube Shorts olarak yayınlanır.</p>
+                    </div>
+                </div>
+                <div class="howto-step">
+                    <div class="howto-number">4</div>
+                    <div class="howto-content">
+                        <h3>Telegram'dan Bildirim Alın</h3>
+                        <p>İşlem başarıyla tamamlandığında bot size onay mesajı gönderir.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Footer -->
+    <footer>
+        <p>YouTube Shorts Otomasyon Paneli — n8n + Telegram + Google Gemini</p>
+    </footer>
+
+    <script>
+        // ========== n8n Status Check ==========
+        async function checkN8nStatus() {
+            const statusBadge = document.getElementById('n8n-status');
+            const statusText = document.getElementById('n8n-status-text');
+            const dot = statusBadge.querySelector('.status-dot');
+            const label = statusBadge.querySelector('span:last-child');
+
+            try {
+                const response = await fetch('http://localhost:5678/healthz', {
+                    mode: 'no-cors',
+                    signal: AbortSignal.timeout(3000)
+                });
+                // no-cors returns opaque response, so if we get here, it's likely running
+                dot.classList.add('online');
+                dot.classList.remove('offline');
+                label.textContent = 'Çevrimiçi';
+                statusText.textContent = 'Çalışıyor ✅';
+                statusText.style.color = '#00b894';
+            } catch (e) {
+                dot.classList.add('offline');
+                dot.classList.remove('online');
+                label.textContent = 'Çevrimdışı';
+                statusText.textContent = 'Çalışmıyor ❌';
+                statusText.style.color = '#e17055';
+            }
+        }
+
+        // ========== Checklist Progress ==========
+        function updateProgress() {
+            const checks = document.querySelectorAll('.check-item input[type="checkbox"]');
+            const completed = Array.from(checks).filter(c => c.checked).length;
+            const total = checks.length;
+            const pct = Math.round((completed / total) * 100);
+
+            document.getElementById('setup-progress').style.width = pct + '%';
+            document.getElementById('progress-text').textContent = `${completed}/${total} tamamlandı`;
+
+            // Save state
+            const state = {};
+            checks.forEach(c => state[c.id] = c.checked);
+            localStorage.setItem('shorts_setup_state', JSON.stringify(state));
+        }
+
+        function loadChecklistState() {
+            const saved = localStorage.getItem('shorts_setup_state');
+            if (saved) {
+                const state = JSON.parse(saved);
+                Object.entries(state).forEach(([id, checked]) => {
+                    const el = document.getElementById(id);
+                    if (el) el.checked = checked;
+                });
+            }
+            updateProgress();
+        }
+
+        // ========== Config Management ==========
+        function saveConfig() {
+            const config = {
+                telegramToken: document.getElementById('config-telegram-token').value,
+                geminiKey: document.getElementById('config-gemini-key').value,
+                ytClient: document.getElementById('config-yt-client').value,
+                ytSecret: document.getElementById('config-yt-secret').value
+            };
+            localStorage.setItem('shorts_config', JSON.stringify(config));
+            showToast('✅ Yapılandırma kaydedildi!');
+        }
+
+        function loadConfig() {
+            const saved = localStorage.getItem('shorts_config');
+            if (saved) {
+                const config = JSON.parse(saved);
+                document.getElementById('config-telegram-token').value = config.telegramToken || '';
+                document.getElementById('config-gemini-key').value = config.geminiKey || '';
+                document.getElementById('config-yt-client').value = config.ytClient || '';
+                document.getElementById('config-yt-secret').value = config.ytSecret || '';
+            }
+        }
+
+        function togglePassword(id) {
+            const input = document.getElementById(id);
+            input.type = input.type === 'password' ? 'text' : 'password';
+        }
+
+        // ========== Utilities ==========
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text);
+            showToast('📋 Kopyalandı: ' + text);
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        function openDocs() {
+            showToast('📖 KURULUM_REHBERI.md dosyasını açın');
+        }
+
+        // ========== Workflow Animation ==========
+        function animateWorkflow() {
+            const steps = document.querySelectorAll('.workflow-step');
+            let i = 0;
+
+            function highlight() {
+                steps.forEach(s => s.classList.remove('active'));
+                steps[i].classList.add('active');
+                i = (i + 1) % steps.length;
+            }
+
+            setInterval(highlight, 2000);
+        }
+
+        // ========== Init ==========
+        document.addEventListener('DOMContentLoaded', () => {
+            checkN8nStatus();
+            loadChecklistState();
+            loadConfig();
+            animateWorkflow();
+
+            // Checklist listeners
+            document.querySelectorAll('.check-item input[type="checkbox"]').forEach(cb => {
+                cb.addEventListener('change', updateProgress);
+            });
+
+            // Recheck n8n status every 30 seconds
+            setInterval(checkN8nStatus, 30000);
+        });
+    </script>
+</body>
+</html>
